@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Canvas Media Editor</title>
+    <style>
+        #canvas {
+            border: 1px solid black;
+        }
+    </style>
+</head>
+<body>
+    <h1>Canvas Media Editor</h1>
+    
+    <input type="file" id="mediaInput" accept="image/*, video/*">
+    <button id="clearCanvas">Clear Canvas</button>
+    
+    <br><br>
+    
+    <canvas id="canvas" width="600" height="400"></canvas>
+    
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const media = [];
+        let selectedMedia = null;
+        let captionVisible = false;
+        
+        document.getElementById('mediaInput').addEventListener('change', handleMediaUpload);
+        document.getElementById('clearCanvas').addEventListener('click', clearCanvas);
+        canvas.addEventListener('mousedown', handleMouseDown);
+        canvas.addEventListener('mousemove', handleMouseMove);
+        canvas.addEventListener('mouseup', handleMouseUp);
+        canvas.addEventListener('click', handleClick);
+        
+        function handleMediaUpload(e) {
+            const file = e.target.files[0];
+            if (file) {
+                if (file.type.startsWith('image')) {
+                    const img = new Image();
+                    img.onload = () => {
+                        media.push({
+                            x: canvas.width / 2 - img.width / 2,
+                            y: canvas.height / 2 - img.height / 2,
+                            media: img,
+                            type: 'image',
+                            caption: ''
+                        });
+                        draw();
+                    };
+                    img.src = URL.createObjectURL(file);
+                } else if (file.type.startsWith('video')) {
+                    const video = document.createElement('video');
+                    video.controls = true;
+                    video.src = URL.createObjectURL(file);
+                    video.onload = () => {
+                        media.push({
+                            x: canvas.width / 2 - video.videoWidth / 2,
+                            y: canvas.height / 2 - video.videoHeight / 2,
+                            media: video,
+                            type: 'video',
+                            caption: ''
+                        });
+                        draw();
+                    };
+                }
+            }
+        }
+        
+        function handleMouseDown(e) {
+            selectedMedia = media.find(m =>
+                e.offsetX >= m.x && e.offsetX <= m.x + m.media.width &&
+                e.offsetY >= m.y && e.offsetY <= m.y + m.media.height
+            );
+        }
+        
+        function handleMouseMove(e) {
+            if (selectedMedia) {
+                selectedMedia.x = e.offsetX - selectedMedia.media.width / 2;
+                selectedMedia.y = e.offsetY - selectedMedia.media.height / 2;
+                draw();
+            }
+        }
+        
+        function handleMouseUp() {
+            selectedMedia = null;
+        }
+        
+        function handleClick(e) {
+            if (selectedMedia) {
+                if (e.offsetY >= selectedMedia.y + selectedMedia.media.height) {
+                    captionVisible = !captionVisible;
+                    draw();
+                }
+            }
+        }
+        
+        function clearCanvas() {
+            media.length = 0;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+        
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            media.forEach(m => {
+                if (m.type === 'image') {
+                    ctx.drawImage(m.media, m.x, m.y);
+                } else if (m.type === 'video') {
+                    ctx.drawImage(m.media, m.x, m.y, m.media.videoWidth, m.media.videoHeight);
+                }
+                
+                if (captionVisible && selectedMedia === m) {
+                    ctx.fillStyle = 'black';
+                    ctx.fillText(m.caption, m.x + m.media.width / 2, m.y + m.media.height + 20);
+                }
+            });
+        }
+        
+        draw();
+    </script>
+</body>
+</html>
